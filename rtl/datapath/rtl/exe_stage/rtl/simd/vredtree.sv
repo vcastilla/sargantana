@@ -523,23 +523,23 @@ assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : 
 
 always_comb begin
     case (sew_to_out)
-        SEW_8:    stage_to_out = 'd4;
+        SEW_8:    stage_to_out = NUM_STAGES - 1;
         SEW_16:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = 'd4;
+                     stage_to_out = NUM_STAGES - 1;
                   end else begin
-                     stage_to_out = 'd3;
+                     stage_to_out = NUM_STAGES - 2;
                   end
         SEW_32:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = 'd3;
+                     stage_to_out = NUM_STAGES - 2;
                   end else begin
-                     stage_to_out = 'd2;
+                     stage_to_out = NUM_STAGES - 3;
                   end
         SEW_64:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = 'd2;
+                     stage_to_out = NUM_STAGES - 3;
                   end else begin
-                     stage_to_out = 'd1;
+                     stage_to_out = NUM_STAGES - 4;
                   end
-        default:  stage_to_out = 'd0;
+        default:  stage_to_out = NUM_STAGES - 4;
     endcase
 end
 
