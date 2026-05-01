@@ -668,7 +668,6 @@ end
 bus64_t data_vpopc_rd;
 vpopc vpopc_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.instr.sew),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_vm_i     (instruction_i.data_vm),
     .use_mask_i    (instruction_i.instr.use_mask),
