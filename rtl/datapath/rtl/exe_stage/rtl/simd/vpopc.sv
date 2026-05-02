@@ -30,7 +30,7 @@ module vpopc (
     output bus64_t                  data_vd_o       // 64-bit result
 );
 
-logic [63:0] count;
+logic [VMAXELEM_LOG-1:0] count;
 
 always_comb begin
     count = '0;
@@ -42,6 +42,6 @@ always_comb begin
     end
 end
 
-assign data_vd_o = count;
+assign data_vd_o = bus64_t'(count);
 
 endmodule
