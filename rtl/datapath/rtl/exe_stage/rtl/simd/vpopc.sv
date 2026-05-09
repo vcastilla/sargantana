@@ -23,25 +23,64 @@ import riscv_pkg::*;
 
 module vpopc (
     input instr_type_t              instr_type_i,   // Instruction type
+    input sew_t                     sew_i,          // Element width
     input bus_simd_t                data_vs2_i,     // bus_simd_t source operand 2
     input bus_mask_t                data_vm_i,      // 64-bit mask
     input logic                     use_mask_i,     
-    input logic[VMAXELEM_LOG:0]     vl_i,            // Current vector lenght in elements    
+    input logic[VMAXELEM_LOG:0]     vl_i,           // Current vector lenght in elements    
     output bus64_t                  data_vd_o       // 64-bit result
 );
 
-logic [VMAXELEM_LOG-1:0] count;
+logic[1:0] data_sum_0[31:0];
+logic[2:0] data_sum_1[15:0];
+logic[3:0] data_sum_2[7:0];
+logic[4:0] data_sum_3[3:0];
+logic[5:0] data_sum_4[1:0];
+bus_simd_t    aux;
 
 always_comb begin
-    count = '0;
+    aux = use_mask_i ? data_vs2_i & data_vm_i : data_vs2_i;
 
-    if (instr_type_i == VPOPC) begin
-        for (int unsigned i = 0; i < vl_i; i++) begin
-            count += data_vs2_i[i] & (use_mask_i ? data_vm_i[i] : 1'b1);
-        end
+    for (int i = 0; i < 32; ++i) begin
+        data_sum_0[i] = aux[2*i] + aux[2*i + 1]; // 2 bits added
     end
-end
 
-assign data_vd_o = bus64_t'(count);
+    for (int i = 0; i < 16; ++i) begin
+        data_sum_1[i] = data_sum_0[2*i] + data_sum_0[2*i + 1]; // 4 bits added
+    end
+
+    for (int i = 0; i < 8; ++i) begin
+        data_sum_2[i] = data_sum_1[2*i] + data_sum_1[2*i + 1]; // 8 bits added
+    end
+
+    for (int i = 0; i < 4; ++i) begin
+        data_sum_3[i] = data_sum_2[2*i] + data_sum_2[2*i + 1]; // 16 bits added
+    end
+
+    for (int i = 0; i < 2; ++i) begin
+        data_sum_4[i] = data_sum_3[2*i] + data_sum_3[2*i + 1]; // 32 bits added
+    end
+
+    case (sew_i)
+        SEW_8: begin
+            for (int i = 0; i < 8; ++i) begin
+                data_vd_o[8*i +: 8] = data_sum_2[i];
+            end
+        end
+        SEW_16: begin
+            for (int i = 0; i < 4; ++i) begin
+                data_vd_o[16*i +: 16] = data_sum_3[i];
+            end
+        end
+        SEW_32: begin
+            for (int i = 0; i < 2; ++i) begin
+                data_vd_o[32*i +: 32] = data_sum_4[i];
+            end
+        end
+        default: begin // SEW_64
+            data_vd_o = data_sum_4[0] + data_sum_4[1];
+        end
+    endcase
+end
 
 endmodule
