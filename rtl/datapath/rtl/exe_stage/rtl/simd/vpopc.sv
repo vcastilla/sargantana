@@ -36,10 +36,13 @@ logic[2:0] data_sum_1[15:0];
 logic[3:0] data_sum_2[7:0];
 logic[4:0] data_sum_3[3:0];
 logic[5:0] data_sum_4[1:0];
-bus_simd_t    aux;
+bus_simd_t aux;
 
 always_comb begin
-    aux = use_mask_i ? data_vs2_i & data_vm_i : data_vs2_i;
+    aux = '0;
+    for (int unsigned i = 0; i < vl_i; i++) begin
+        aux[i] = use_mask_i ? (data_vs2_i[i] & data_vm_i[i]) : data_vs2_i[i];
+    end
 
     for (int i = 0; i < 32; ++i) begin
         data_sum_0[i] = aux[2*i] + aux[2*i + 1]; // 2 bits added
@@ -61,26 +64,7 @@ always_comb begin
         data_sum_4[i] = data_sum_3[2*i] + data_sum_3[2*i + 1]; // 32 bits added
     end
 
-    case (sew_i)
-        SEW_8: begin
-            for (int i = 0; i < 8; ++i) begin
-                data_vd_o[8*i +: 8] = data_sum_2[i];
-            end
-        end
-        SEW_16: begin
-            for (int i = 0; i < 4; ++i) begin
-                data_vd_o[16*i +: 16] = data_sum_3[i];
-            end
-        end
-        SEW_32: begin
-            for (int i = 0; i < 2; ++i) begin
-                data_vd_o[32*i +: 32] = data_sum_4[i];
-            end
-        end
-        default: begin // SEW_64
-            data_vd_o = data_sum_4[0] + data_sum_4[1];
-        end
-    endcase
+    data_vd_o = data_sum_4[0] + data_sum_4[1];
 end
 
 endmodule
