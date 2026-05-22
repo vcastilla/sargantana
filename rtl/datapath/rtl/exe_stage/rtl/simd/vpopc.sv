@@ -38,33 +38,38 @@ logic[4:0] data_sum_3[3:0];
 logic[5:0] data_sum_4[1:0];
 bus_simd_t aux;
 
-always_comb begin
-    aux = '0;
-    for (int unsigned i = 0; i < vl_i; i++) begin
-        aux[i] = use_mask_i ? (data_vs2_i[i] & data_vm_i[i]) : data_vs2_i[i];
+generate
+    if (VLEN == 128) begin
+        always_comb begin
+            aux = '0;
+            for (int i = 0; i < vl_i; ++i) aux[i] = use_mask_i ? (data_vs2_i[i] & data_vm_i[i]) : data_vs2_i[i];
+            for (int i = 0; i < 8; ++i) data_sum_0[i] = aux[2*i] + aux[2*i + 1];               // 2 bits added
+            for (int i = 0; i < 4; ++i) data_sum_1[i] = data_sum_0[2*i] + data_sum_0[2*i + 1]; // 4 bits added
+            for (int i = 0; i < 2; ++i) data_sum_2[i] = data_sum_1[2*i] + data_sum_1[2*i + 1]; // 8 bits added
+            data_vd_o = data_sum_2[0] + data_sum_2[1];
+        end
+    end else if (VLEN == 256) begin 
+        always_comb begin
+            aux = '0;
+            for (int i = 0; i < vl_i; ++i) aux[i] = use_mask_i ? (data_vs2_i[i] & data_vm_i[i]) : data_vs2_i[i];
+            for (int i = 0; i < 16; ++i) data_sum_0[i] = aux[2*i] + aux[2*i + 1];               // 2 bits added
+            for (int i = 0; i < 8; ++i)  data_sum_1[i] = data_sum_0[2*i] + data_sum_0[2*i + 1]; // 4 bits added
+            for (int i = 0; i < 4; ++i)  data_sum_2[i] = data_sum_1[2*i] + data_sum_1[2*i + 1]; // 8 bits added
+            for (int i = 0; i < 2; ++i)  data_sum_3[i] = data_sum_2[2*i] + data_sum_2[2*i + 1]; // 16 bits added
+            data_vd_o = data_sum_3[0] + data_sum_3[1];
+        end
+    end else if (VLEN == 512) begin 
+        always_comb begin
+            aux = '0;
+            for (int i = 0; i < vl_i; ++i) aux[i] = use_mask_i ? (data_vs2_i[i] & data_vm_i[i]) : data_vs2_i[i];
+            for (int i = 0; i < 32; ++i) data_sum_0[i] = aux[2*i] + aux[2*i + 1];               // 2 bits added
+            for (int i = 0; i < 16; ++i) data_sum_1[i] = data_sum_0[2*i] + data_sum_0[2*i + 1]; // 4 bits added
+            for (int i = 0; i < 8; ++i)  data_sum_2[i] = data_sum_1[2*i] + data_sum_1[2*i + 1]; // 8 bits added
+            for (int i = 0; i < 4; ++i)  data_sum_3[i] = data_sum_2[2*i] + data_sum_2[2*i + 1]; // 16 bits added
+            for (int i = 0; i < 2; ++i)  data_sum_4[i] = data_sum_3[2*i] + data_sum_3[2*i + 1]; // 32 bits added
+            data_vd_o = data_sum_4[0] + data_sum_4[1];
+        end
     end
-
-    for (int i = 0; i < 32; ++i) begin
-        data_sum_0[i] = aux[2*i] + aux[2*i + 1]; // 2 bits added
-    end
-
-    for (int i = 0; i < 16; ++i) begin
-        data_sum_1[i] = data_sum_0[2*i] + data_sum_0[2*i + 1]; // 4 bits added
-    end
-
-    for (int i = 0; i < 8; ++i) begin
-        data_sum_2[i] = data_sum_1[2*i] + data_sum_1[2*i + 1]; // 8 bits added
-    end
-
-    for (int i = 0; i < 4; ++i) begin
-        data_sum_3[i] = data_sum_2[2*i] + data_sum_2[2*i + 1]; // 16 bits added
-    end
-
-    for (int i = 0; i < 2; ++i) begin
-        data_sum_4[i] = data_sum_3[2*i] + data_sum_3[2*i + 1]; // 32 bits added
-    end
-
-    data_vd_o = data_sum_4[0] + data_sum_4[1];
-end
+endgenerate
 
 endmodule
