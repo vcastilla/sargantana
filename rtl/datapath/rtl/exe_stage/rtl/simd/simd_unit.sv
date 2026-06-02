@@ -1,16 +1,16 @@
 /*
  * Copyright 2025 BSC*
  * *Barcelona Supercomputing Center (BSC)
- * 
+ *
  * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
- * 
+ *
  * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
  * may not use this file except in compliance with the License, or, at your
  * option, the Apache License version 2.0. You may obtain a copy of the
  * License at
- * 
+ *
  * https://solderpad.org/licenses/SHL-2.1/
- * 
+ *
  * Unless required by applicable law or agreed to in writing, any work
  * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -25,9 +25,9 @@ module simd_unit
 (
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
-    input logic                   flush_i,                // Flush 
+    input logic                   flush_i,                // Flush
     input vxrm_t                  vxrm_i,                 // Vector Fixed-Point Rounding Mode
-    input rr_exe_simd_instr_t     instruction_i,          // In instruction 
+    input rr_exe_simd_instr_t     instruction_i,          // In instruction
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o,     // Out instruction
     output logic                  stall_prev_o,
@@ -84,7 +84,7 @@ logic           previous_div_is_opvx_q;             // Instruction uses rs1 inst
 logic           previous_div_is_opvx_d;             // Instruction uses rs1 instead of vs1 of previous div/rem
 
 instr_type_t    previous_div_instr_type_q;          // Type of instruction of previous div/rem
-instr_type_t    previous_div_instr_type_d;          // Type of instruction of previous div/rem          
+instr_type_t    previous_div_instr_type_d;          // Type of instruction of previous div/rem
 
 function [5:0] trunc_6bits(input [31:0] val_in);
     trunc_6bits = val_in[5:0];
@@ -256,6 +256,48 @@ function logic is_vsetvl(input rr_exe_simd_instr_t instr);
                 (instr.instr.instr_type == VSETIVLI)) ? 1'b1 : 1'b0;
 endfunction
 
+logic is_vred_instr_i;
+logic is_vdiv_instr_i;
+logic is_vmul_instr_i;
+logic is_vmadd_vsmul_instr_i;
+logic is_vw_instr_i;
+logic is_vn_instr_i;
+logic is_vww_instr_i;
+logic is_vm_instr_i;
+logic is_vsetvl_instr_i;
+
+logic not_masked_output_instr_to_out;
+logic is_vred_instr_to_out;
+logic is_vdiv_instr_to_out;
+logic is_vmul_instr_to_out;
+logic is_vmadd_vsmul_instr_to_out;
+logic is_vw_instr_to_out;
+logic is_vn_instr_to_out;
+logic is_vww_instr_to_out;
+logic is_vm_instr_to_out;
+logic is_vsetvl_instr_to_out;
+
+assign is_vred_instr_i = is_vred(instruction_i);
+assign is_vdiv_instr_i = is_vdiv(instruction_i);
+assign is_vmul_instr_i = is_vmul(instruction_i);
+assign is_vmadd_vsmul_instr_i = is_vmadd_vsmul(instruction_i);
+assign is_vw_instr_i = is_vw(instruction_i);
+assign is_vn_instr_i = is_vn(instruction_i);
+assign is_vww_instr_i = is_vww(instruction_i);
+assign is_vm_instr_i = is_vm(instruction_i);
+assign is_vsetvl_instr_i = is_vsetvl(instruction_i);
+
+assign not_masked_output_instr_to_out = not_masked_output(instr_to_out);
+assign is_vred_instr_to_out = is_vred(instr_to_out);
+assign is_vdiv_instr_to_out = is_vdiv(instr_to_out);
+assign is_vmul_instr_to_out = is_vmul(instr_to_out);
+assign is_vmadd_vsmul_instr_to_out = is_vmadd_vsmul(instr_to_out);
+assign is_vw_instr_to_out = is_vw(instr_to_out);
+assign is_vn_instr_to_out = is_vn(instr_to_out);
+assign is_vww_instr_to_out = is_vww(instr_to_out);
+assign is_vm_instr_to_out = is_vm(instr_to_out);
+assign is_vsetvl_instr_to_out = is_vsetvl(instr_to_out);
+
 function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
@@ -271,8 +313,8 @@ function logic is_div_1_clock(input bus_simd_t vs1, input bus_simd_t vs2, input 
                                                                     ((instr_type == VREM) && (instr_entry_i.instr.instr_type == VDIV))    ||
                                                                     ((instr_type == VDIVU) && (instr_entry_i.instr.instr_type == VREMU))  ||
                                                                     ((instr_type == VREMU) && (instr_entry_i.instr.instr_type == VDIVU))      ) ? (is_opvx ?  ((vs2 == instr_entry_i.data_vs2) && (rs1 == instr_entry_i.data_rs1)) :
-                                                                                                                                                        ((vs2 == instr_entry_i.data_vs2) && (vs1 == instr_entry_i.data_vs1))) : 1'b0); 
-    
+                                                                                                                                                        ((vs2 == instr_entry_i.data_vs2) && (vs1 == instr_entry_i.data_vs1))) : 1'b0);
+
 endfunction
 
 
@@ -297,7 +339,7 @@ logic division_pipe_d [DIV_STAGES - 2:0];
 logic division_pipe_q [DIV_STAGES - 2:0];
 
 // in order to reduce the area and not use a redundant array of rr_exe_simd_instr_t
-// a global instruction is stored, since there can't be more than 1 in-flight div/rems 
+// a global instruction is stored, since there can't be more than 1 in-flight div/rems
 rr_exe_simd_instr_t division_instruction_d;
 rr_exe_simd_instr_t division_instruction_q;
 
@@ -312,22 +354,22 @@ logic is_fpnew_turn;
 */
 
 always_comb begin
-    previous_div_rs1_d = previous_div_rs1_q;               
-    previous_div_vs1_d = previous_div_vs1_q;                
-    previous_div_vs2_d = previous_div_vs2_q;                
-    previous_div_is_opvx_d = previous_div_is_opvx_q;            
-    previous_div_instr_type_d = previous_div_instr_type_q; 
+    previous_div_rs1_d = previous_div_rs1_q;
+    previous_div_vs1_d = previous_div_vs1_q;
+    previous_div_vs2_d = previous_div_vs2_q;
+    previous_div_is_opvx_d = previous_div_is_opvx_q;
+    previous_div_instr_type_d = previous_div_instr_type_q;
 
-    if (is_vsetvl(instruction_i)) begin
+    if (is_vsetvl_instr_i) begin
         previous_div_instr_type_d = instruction_i.instr.instr_type;
         simd_exe_stages = 6'd1;
-    end else if (is_vmul(instruction_i)) begin
+    end else if (is_vmul_instr_i) begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd3 : 6'd2;
     end
-    else if (is_vmadd_vsmul(instruction_i)) begin
+    else if (is_vmadd_vsmul_instr_i) begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
-    else if (is_vred(instruction_i)) begin
+    else if (is_vred_instr_i) begin
         case (instruction_i.instr.sew)
             SEW_8  : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) + 2);
             SEW_16 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) + 1);
@@ -335,17 +377,17 @@ always_comb begin
             SEW_64 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) - 1);
             default : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
         endcase
-    end else if (is_vdiv(instruction_i)) begin
-        
+    end else if (is_vdiv_instr_i) begin
+
         // Deciding on how many cycles to do the DIV/REM
         if(is_div_1_clock(  .vs1(previous_div_vs1_q), .vs2(previous_div_vs2_q), .rs1(previous_div_rs1_q), .is_opvx(previous_div_is_opvx_q),
         .instr_type(previous_div_instr_type_q), .instr_entry_i(instruction_i)) && instruction_i.instr.valid) begin
 
-            simd_exe_stages = 6'd1; 
+            simd_exe_stages = 6'd1;
 
         end else begin
 
-            simd_exe_stages = 6'd32; 
+            simd_exe_stages = 6'd32;
 
         end
 
@@ -353,22 +395,22 @@ always_comb begin
         // when a new DIV/REM is issued, it's operands are saved
         // for comparision with future DIV/REM
         if(instruction_i.instr.valid) begin
-            previous_div_rs1_d          = instruction_i.data_rs1;                 
-            previous_div_vs1_d          = instruction_i.data_vs1;                
-            previous_div_vs2_d          = instruction_i.data_vs2;                
-            previous_div_is_opvx_d      = instruction_i.instr.is_opvx;            
+            previous_div_rs1_d          = instruction_i.data_rs1;
+            previous_div_vs1_d          = instruction_i.data_vs1;
+            previous_div_vs2_d          = instruction_i.data_vs2;
+            previous_div_is_opvx_d      = instruction_i.instr.is_opvx;
             previous_div_instr_type_d   = instruction_i.instr.instr_type;
         end
         else begin
-            previous_div_rs1_d          = previous_div_rs1_q;               
-            previous_div_vs1_d          = previous_div_vs1_q;                
-            previous_div_vs2_d          = previous_div_vs2_q;                
-            previous_div_is_opvx_d      = previous_div_is_opvx_q;            
-            previous_div_instr_type_d   = previous_div_instr_type_q;  
+            previous_div_rs1_d          = previous_div_rs1_q;
+            previous_div_vs1_d          = previous_div_vs1_q;
+            previous_div_vs2_d          = previous_div_vs2_q;
+            previous_div_is_opvx_d      = previous_div_is_opvx_q;
+            previous_div_instr_type_d   = previous_div_instr_type_q;
         end
     end
     else if (is_vf_redu(instruction_i.instr.instr_type)) begin
-        if (is_vw(instruction_i)) begin
+        if (is_vw_instr_i) begin
             simd_exe_stages = STAGES_TREE64_W;
         end else begin
             case(instruction_i.instr.sew)
@@ -379,7 +421,7 @@ always_comb begin
         end
     end
     else if (is_vf_redo(instruction_i.instr.instr_type)) begin
-        if (is_vw(instruction_i)) begin
+        if (is_vw_instr_i) begin
             simd_exe_stages = STAGES_VFREDO64_W;
         end else begin
             case(instruction_i.instr.sew)
@@ -405,11 +447,11 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             division_pipe_q[i]      <= '0;
             division_instruction_q  <= '0;
         end
-        
-        previous_div_rs1_q          <= '0;                
-        previous_div_vs1_q          <= '0;               
-        previous_div_vs2_q          <= '0;              
-        previous_div_is_opvx_q      <= '0;          
+
+        previous_div_rs1_q          <= '0;
+        previous_div_vs1_q          <= '0;
+        previous_div_vs2_q          <= '0;
+        previous_div_is_opvx_q      <= '0;
         previous_div_instr_type_q   <= drac_pkg::ADD;
 
 
@@ -419,16 +461,16 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
         end
-        
+
         for (int i = 0; i < (DIV_STAGES - 1); i++) begin
             division_pipe_q[i]      <= division_pipe_d[i];
         end
         division_instruction_q      <= division_instruction_d;
 
-        previous_div_rs1_q          <= previous_div_rs1_d;                
-        previous_div_vs1_q          <= previous_div_vs1_d;               
-        previous_div_vs2_q          <= previous_div_vs2_d;              
-        previous_div_is_opvx_q      <= previous_div_is_opvx_d;          
+        previous_div_rs1_q          <= previous_div_rs1_d;
+        previous_div_vs1_q          <= previous_div_vs1_d;
+        previous_div_vs2_q          <= previous_div_vs2_d;
+        previous_div_is_opvx_q      <= previous_div_is_opvx_d;
         previous_div_instr_type_q   <= previous_div_instr_type_d;
     end
 end
@@ -467,7 +509,7 @@ always_comb begin
     for (int j = 0; j < (DIV_STAGES - 1); j++) begin
         if (j==0) begin
 
-            if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd32) && instruction_i.instr.valid) begin
+            if(is_vdiv_instr_i && (simd_exe_stages == 6'd32) && instruction_i.instr.valid) begin
                 division_pipe_d[0]      = instruction_i.instr.valid;
                 division_instruction_d  = instruction_i;
                 // division_pipe_d[0].simd_instr = instruction_i;
@@ -481,10 +523,10 @@ always_comb begin
             division_pipe_d[j]          = division_pipe_q[j-1];
             // division_instruction_d = division_instruction_q;
             // division_pipe_d[j].simd_instr = division_pipe_q[j-1].simd_instr;
-                 
+
         end
     end
-    
+
 end
 
 //Select the instruction that completes its correspondent pipeline
@@ -515,11 +557,11 @@ always_comb begin
         instr_to_out_integer = instruction_i;
     end else begin
         instr_to_out_integer = '0;
-    end 
+    end
 end
 
 always_comb begin
-    if (is_fpnew_turn) begin 
+    if (is_fpnew_turn) begin
         instr_to_out = fpnew_out_instruction;
     end else begin
         instr_to_out = instr_to_out_integer;
@@ -578,18 +620,18 @@ genvar gv_fu;
 generate
     for (gv_fu=0; gv_fu<drac_pkg::VELEMENTS; gv_fu=gv_fu+1) begin
         always_comb begin
-            if (is_vw(instruction_i) || is_vn(instruction_i)) begin
-                vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
-                                        {{HALF_SIZE{1'b0}}, rs1_replicated[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]} : 
+            if (is_vw_instr_i || is_vn_instr_i) begin
+                vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ?
+                                        {{HALF_SIZE{1'b0}}, rs1_replicated[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]} :
                                         {{HALF_SIZE{1'b0}}, instruction_i.data_vs1[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]};
-                vs2_elements[gv_fu] = (is_vww(instruction_i) || is_vn(instruction_i)) ? 
+                vs2_elements[gv_fu] = (is_vww_instr_i || is_vn_instr_i) ?
                                         instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE] :
                                         {{HALF_SIZE{1'b0}}, instruction_i.data_vs2[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]};
-                 data_vm[gv_fu] = {64{1'b0}};                                        
+                 data_vm[gv_fu] = {64{1'b0}};
             end else begin
                 //vs1 is either the data_vs1, or the replicated rs1/imm
-                vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
-                                        rs1_replicated[(gv_fu*DATA_SIZE) +: DATA_SIZE] : 
+                vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ?
+                                        rs1_replicated[(gv_fu*DATA_SIZE) +: DATA_SIZE] :
                                         instruction_i.data_vs1[(gv_fu*DATA_SIZE) +: DATA_SIZE];
                 vs2_elements[gv_fu] = instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE];
                 case (instruction_i.instr.sew)
@@ -609,7 +651,7 @@ generate
                         data_vm[gv_fu] = {64{1'b0}};
                     end
 
-                endcase 
+                endcase
             end
         end
 
@@ -633,7 +675,7 @@ endgenerate
 always_comb begin
     fu_data_vd = (instr_to_out.instr.vta) ? '1 : instr_to_out.data_old_vd;
     for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
-        if (is_vn(instr_to_out)) begin
+        if (is_vn_instr_to_out) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
         end else if ((instr_to_out.instr.instr_type == VMADC) || (instr_to_out.instr.instr_type == VMSBC)) begin
             case (instr_to_out.instr.sew)
@@ -657,7 +699,7 @@ always_comb begin
                         fu_data_vd[i*(DATA_SIZE/64)+j] = vd_elements[i][j];
                     end
                 end
-            endcase    
+            endcase
         end else begin
             fu_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = vd_elements[i];
         end
@@ -729,9 +771,9 @@ always_comb begin
                 data_rd = '0;
             end
         endcase
-    end 
+    end
 
-    
+
     // else if (instr_to_out.instr.instr_type == VEXT) begin
     //     //Extract element specified by rs1
     //     case (instr_to_out.sew)
@@ -784,7 +826,7 @@ always_comb begin
     //             end
     //         end
     //     endcase
-    // end 
+    // end
     else if (instr_to_out.instr.instr_type == VCNT) begin
         //Vector count equals
         //Uses the result of the FUs, which performed a vseq, and counts
@@ -968,14 +1010,14 @@ always_comb begin
     if (is_fpnew_turn) begin // if it's fpnew
         result_data_vd = fpnew_result;
     end else if (is_vf_redu(instr_to_out.instr.instr_type)) begin
-        result_data_vd = fred_data_vd; 
+        result_data_vd = fred_data_vd;
     end else if (is_vf_redo(instr_to_out.instr.instr_type)) begin
-        result_data_vd = fredo_data_vd; 
+        result_data_vd = fredo_data_vd;
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin // ready in 1c always
         result_data_vd = data_vf7_vd;
     end else if ((instr_to_out.instr.instr_type == VFMERGE) || (instr_to_out.instr.instr_type == VFMV)) begin
         result_data_vd = rs1_replicated;
-    end else if (is_vred(instr_to_out)) begin
+    end else if (is_vred_instr_to_out) begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
         result_data_vd = data_viota_vd;
@@ -1010,9 +1052,9 @@ always_comb begin
                 end
             end
             default: begin
-                result_data_vd = '0; 
+                result_data_vd = '0;
             end
-        endcase  
+        endcase
     end else if ((instr_to_out.instr.instr_type == VMORN) || (instr_to_out.instr.instr_type == VMNOR) ||
                  (instr_to_out.instr.instr_type == VMANDN) || (instr_to_out.instr.instr_type == VMNAND) ||
                  (instr_to_out.instr.instr_type == VMAND) || (instr_to_out.instr.instr_type == VMOR) ||
@@ -1022,9 +1064,9 @@ always_comb begin
     end else if ((instr_to_out.instr.instr_type == VMSBF) || (instr_to_out.instr.instr_type == VMSIF) ||
                  (instr_to_out.instr.instr_type == VMSOF)) begin
         result_data_vd = '1;
-        result_data_vd[63:0] = result_vmsbf[63:0];   
+        result_data_vd[63:0] = result_vmsbf[63:0];
     end else if ((instr_to_out.instr.instr_type == VMSEQ)  || (instr_to_out.instr.instr_type == VMSNE) ||
-                 (instr_to_out.instr.instr_type == VMSLTU) || (instr_to_out.instr.instr_type == VMSLT) || 
+                 (instr_to_out.instr.instr_type == VMSLTU) || (instr_to_out.instr.instr_type == VMSLT) ||
                  (instr_to_out.instr.instr_type == VMSLEU) || (instr_to_out.instr.instr_type == VMSLE) ||
                  (instr_to_out.instr.instr_type == VMSGTU) || (instr_to_out.instr.instr_type == VMSGT)) begin
         result_data_vd = '1;
@@ -1110,11 +1152,11 @@ always_comb begin
             SEW_64: begin
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if ((instr_to_out.instr.instr_type == VSEXT_VF2)) begin
-                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{fu_data_vd[((64*(i+1))/2)-1]}}, fu_data_vd[(i*32)+:32]}};                                     
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{fu_data_vd[((64*(i+1))/2)-1]}}, fu_data_vd[(i*32)+:32]}};
                     end else if((instr_to_out.instr.instr_type == VZEXT_VF2)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{1'b0}}, fu_data_vd[(i*32)+:32]}};
                     end else if ((instr_to_out.instr.instr_type == VSEXT_VF4)) begin
-                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{fu_data_vd[((64*(i+1))/4)-1]}}, fu_data_vd[(i*16)+:16]}};                                 
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{fu_data_vd[((64*(i+1))/4)-1]}}, fu_data_vd[(i*16)+:16]}};
                     end else if((instr_to_out.instr.instr_type == VZEXT_VF4)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{1'b0}}, fu_data_vd[(i*16)+:16]}};
                     end else if ((instr_to_out.instr.instr_type == VSEXT_VF8)) begin
@@ -1123,12 +1165,12 @@ always_comb begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{56{1'b0}}}, fu_data_vd[(i*8)+:8]};
                     end
                 end
-            end    
+            end
             default: begin
                 result_data_vd = '0;
             end
         endcase
-    end 
+    end
     else if (instr_to_out.instr.instr_type == VSLIDEUP) begin
         result_data_vd = instr_to_out.data_old_vd;
         shift_amount_in_vslide = 0;
@@ -1277,7 +1319,7 @@ always_comb begin
             end
 
         endcase
-    end 
+    end
     else if ((instr_to_out.instr.instr_type == VSLIDE1UP) || (instr_to_out.instr.instr_type == VFSLIDE1UP)) begin
         //Forood: This instruction can easily be fused with VLSIDE1DOWN
         // I coded them seperatly in order to keep things clean and understandable in case
@@ -1286,13 +1328,13 @@ always_comb begin
         // instruction we can directly reuse the RTL for the integer one on
         // the FP instruction
         result_data_vd = '0;
-        
+
         case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < ((VLEN/8) - 1) ; ++i) begin
-                   if(i < (instr_to_out.instr.vl - 1)) begin    
+                   if(i < (instr_to_out.instr.vl - 1)) begin
                         result_data_vd[(i + 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
-                    end 
+                    end
                 end
                 result_data_vd[0 +: 8] = instruction_i.data_rs1[7:0];
             end
@@ -1314,7 +1356,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
-                    if(i < (instr_to_out.instr.vl - 1)) begin    
+                    if(i < (instr_to_out.instr.vl - 1)) begin
                         result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                     end
                 end
@@ -1322,28 +1364,28 @@ always_comb begin
             end
             default: begin
                 for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
-                    if(i < (instr_to_out.instr.vl - 1)) begin    
+                    if(i < (instr_to_out.instr.vl - 1)) begin
                         result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                     end
                 end
                 result_data_vd[0 +: 64] = instruction_i.data_rs1[63:0];
             end
         endcase
-    end 
+    end
     else if ((instr_to_out.instr.instr_type == VSLIDE1DOWN) || (instr_to_out.instr.instr_type == VFSLIDE1DOWN)) begin
         //Forood: This instruction can easily be fused with VLSIDE1DUP
         // I coded them seperatly in order to keep things clean and understandable in case
         // future debugging is needed.
         result_data_vd = '0;
         case (instr_to_out.instr.sew)
-            SEW_8: begin                 
+            SEW_8: begin
                     for (int i = 1 ; i < (VLEN/8)  ; ++i) begin
                         if (i < instr_to_out.instr.vl) begin
                             result_data_vd[(i - 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                         end
                     end
                     result_data_vd[trunc_vl_i_sew8(instr_to_out.instr.vl - 1) * 8 +: 8] = instruction_i.data_rs1[7:0];
-                    
+
 
             end
             SEW_16: begin
@@ -1353,7 +1395,7 @@ always_comb begin
                         end
                     end
                     result_data_vd[trunc_vl_i_sew16(instr_to_out.instr.vl - 1) * 16 +: 16] = instruction_i.data_rs1[15:0];
-                    
+
             end
             SEW_32: begin
                 for (int i = 1 ; i < (VLEN/32)  ; ++i) begin
@@ -1379,13 +1421,13 @@ always_comb begin
                         end
                     end
                     result_data_vd[trunc_vl_i_sew64(instr_to_out.instr.vl - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
-                
+
             end
         endcase
-    end 
+    end
     else if ((instr_to_out.instr.instr_type == VRGATHER) && (~instr_to_out.instr.is_opvx) && (~instr_to_out.instr.is_opvi)) begin
         result_data_vd = '0;
-        
+
         case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
@@ -1398,7 +1440,7 @@ always_comb begin
                         result_data_vd[(i * 8) +: 8] = 0;
                     end
                 end
-                
+
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
@@ -1431,12 +1473,12 @@ always_comb begin
                 end
             end
         endcase
-    end 
+    end
     else if (instr_to_out.instr.instr_type == VRGATHEREI16) begin
         result_data_vd = 0;
         //Forood: don't know what to do when the SEW < 16 because there are more elements than indexes, at the moment they are left
         // untouched but they may be forced to set to 0
-        // also when sew > 16 there are more indexes than elements, so at the moment only (VLEN/SEW) first elements are checked 
+        // also when sew > 16 there are more indexes than elements, so at the moment only (VLEN/SEW) first elements are checked
 
 
         case (instr_to_out.instr.sew)
@@ -1449,7 +1491,7 @@ always_comb begin
                         result_data_vd[(i * 8) +: 8] = 0;
                     end
                 end
-                
+
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
@@ -1514,7 +1556,7 @@ always_comb begin
                     else begin
                         result_data_vd[(i * 8) +: 8] = 0;
                     end
-                end     
+                end
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
@@ -1524,7 +1566,7 @@ always_comb begin
                     else begin
                         result_data_vd[(i * 16) +: 16] = 0;
                     end
-                end    
+                end
             end
             SEW_32: begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
@@ -1534,7 +1576,7 @@ always_comb begin
                     else begin
                         result_data_vd[(i * 32) +: 32] = 0;
                     end
-                end    
+                end
             end
             SEW_64: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
@@ -1544,7 +1586,7 @@ always_comb begin
                     else begin
                         result_data_vd[(i * 64) +: 64] = 0;
                     end
-                end    
+                end
             end
             default: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
@@ -1554,7 +1596,7 @@ always_comb begin
                     else begin
                         result_data_vd[(i * 64) +: 64] = 0;
                     end
-                end    
+                end
             end
         endcase
     end
@@ -1572,7 +1614,7 @@ always_comb begin
                         result_data_vd[(gather_index * 8) +: 8] = instruction_i.data_vs2[(i) * 8 +: 8];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
-                end     
+                end
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
@@ -1580,7 +1622,7 @@ always_comb begin
                         result_data_vd[(gather_index * 16) +: 16] = instruction_i.data_vs2[(i) * 16 +: 16];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
-                end    
+                end
             end
             SEW_32: begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
@@ -1588,7 +1630,7 @@ always_comb begin
                         result_data_vd[(gather_index * 32) +: 32] = instruction_i.data_vs2[(i) * 32 +: 32];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
-                end    
+                end
             end
             SEW_64: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
@@ -1596,7 +1638,7 @@ always_comb begin
                         result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
-                end   
+                end
             end
             default: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
@@ -1604,9 +1646,9 @@ always_comb begin
                         result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
-                end   
+                end
             end
-            
+
         endcase
     end
 
@@ -1639,10 +1681,10 @@ always_comb begin
                 end
             end
             default: begin
-                result_data_vd = '0; 
+                result_data_vd = '0;
             end
         endcase
-    end 
+    end
     else begin
         result_data_vd = fu_data_vd;
     end
@@ -1653,7 +1695,7 @@ sew_t masked_sew;
 //Apply the mask to the vector result
 //Unaffected elements are filled with the old vd data
 always_comb begin
-    if (is_vw(instr_to_out) && (instr_to_out.instr.sew != SEW_64)) begin
+    if (is_vw_instr_to_out && (instr_to_out.instr.sew != SEW_64)) begin
         case (instr_to_out.instr.sew)
             SEW_8: masked_sew = SEW_16;
             SEW_16: masked_sew = SEW_32;
@@ -1664,9 +1706,9 @@ always_comb begin
         masked_sew = instr_to_out.instr.sew;
     end
 
-    if (is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type) || is_vred(instr_to_out) || not_masked_output(instr_to_out)|| ~instr_to_out.instr.use_mask) begin
+    if (is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type) || is_vred_instr_to_out || not_masked_output_instr_to_out|| ~instr_to_out.instr.use_mask) begin
         masked_data_vd = result_data_vd;
-    end else if (is_vm(instr_to_out)) begin
+    end else if (is_vm_instr_to_out) begin
         //masked_data_vd = '1;
         masked_data_vd = (instr_to_out.instr.vma) ? '1 : instr_to_out.data_old_vd;
         case (masked_sew)
@@ -1728,14 +1770,14 @@ end
 
 bus_simd_t tail_data_vd;
 always_comb begin
-    tail_data_vd = (instr_to_out.instr.vta || is_vm(instr_to_out)) ? '1 : instr_to_out.data_old_vd;
+    tail_data_vd = (instr_to_out.instr.vta || is_vm_instr_to_out) ? '1 : instr_to_out.data_old_vd;
     case(masked_sew)
         SEW_8: begin
             for (int i = 0; i<(VLEN/8); ++i) begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
-                    if (is_vm(instr_to_out)) begin
+                    if (is_vm_instr_to_out) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
+                    end else if (is_vred_instr_to_out || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(8*i)+:8] = masked_data_vd[(8*i)+:8];
                         end
@@ -1748,9 +1790,9 @@ always_comb begin
         SEW_16: begin
             for (int i = 0; i<(VLEN/16); ++i) begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
-                    if (is_vm(instr_to_out)) begin
+                    if (is_vm_instr_to_out) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
+                    end else if (is_vred_instr_to_out || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(16*i)+:16] = masked_data_vd[(16*i)+:16];
                         end
@@ -1763,9 +1805,9 @@ always_comb begin
         SEW_32: begin
             for (int i = 0; i<(VLEN/32); ++i) begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
-                    if (is_vm(instr_to_out)) begin
+                    if (is_vm_instr_to_out) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
+                    end else if (is_vred_instr_to_out || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(32*i)+:32] = masked_data_vd[(32*i)+:32];
                         end
@@ -1778,9 +1820,9 @@ always_comb begin
         SEW_64: begin
             for (int i = 0; i<(VLEN/64); ++i) begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
-                    if (is_vm(instr_to_out)) begin
+                    if (is_vm_instr_to_out) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
+                    end else if (is_vred_instr_to_out || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(64*i)+:64] = masked_data_vd[(64*i)+:64];
                         end
@@ -1818,8 +1860,8 @@ assign is_fpnew_turn = ((~is_collision) &&
 
 always_comb begin
     if (is_fpnew_turn) begin
-        instruction_simd_o.valid                = fpnew_out_instruction.instr.valid & 
-                                                  (fpnew_out_instruction.instr.unit == UNIT_SIMD) & 
+        instruction_simd_o.valid                = fpnew_out_instruction.instr.valid &
+                                                  (fpnew_out_instruction.instr.unit == UNIT_SIMD) &
                                                   fpnew_out_instruction.instr.vregfile_we;
         instruction_simd_o.pc                   = fpnew_out_instruction.instr.pc;
         instruction_simd_o.bpred                = fpnew_out_instruction.instr.bpred;
@@ -1845,8 +1887,8 @@ always_comb begin
         `endif
 
     end else begin
-        instruction_simd_o.valid = instr_to_out.instr.valid & 
-                                   (instr_to_out.instr.unit == UNIT_SIMD) & 
+        instruction_simd_o.valid = instr_to_out.instr.valid &
+                                   (instr_to_out.instr.unit == UNIT_SIMD) &
                                    instr_to_out.instr.vregfile_we;
         instruction_simd_o.pc    = instr_to_out.instr.pc;
         instruction_simd_o.bpred = instr_to_out.instr.bpred;
@@ -1874,8 +1916,8 @@ always_comb begin
 end
 
 //Produce the scalar and vector wb structs
-assign instruction_scalar_o.valid = instr_to_out.instr.valid & 
-                                (instr_to_out.instr.unit == UNIT_SIMD) & 
+assign instruction_scalar_o.valid = instr_to_out.instr.valid &
+                                (instr_to_out.instr.unit == UNIT_SIMD) &
                                 instr_to_out.instr.regfile_we;
 assign instruction_scalar_o.pc    = instr_to_out.instr.pc;
 assign instruction_scalar_o.bpred = instr_to_out.instr.bpred;
@@ -1904,7 +1946,7 @@ assign instruction_scalar_o.id = instr_to_out.instr.id;
 
 
 assign instruction_fp_o.valid           = instr_to_out.instr.valid &
-                                          (instr_to_out.instr.unit == UNIT_SIMD) & 
+                                          (instr_to_out.instr.unit == UNIT_SIMD) &
                                           instr_to_out.instr.fregfile_we;
 assign instruction_fp_o.pc              = instr_to_out.instr.pc;
 assign instruction_fp_o.bpred           = instr_to_out.instr.bpred;
@@ -1925,7 +1967,7 @@ assign instruction_fp_o.fp_status       = fpnew_pkg::status_t'('0); //finish_fp_
 assign instruction_fp_o.ex              = '0;
 `ifdef SIM_KONATA_DUMP
    assign instruction_fp_o.id           = instr_to_out.instr.id;
-`endif 
+`endif
 
 //Exceptions
 always_comb begin
